@@ -27,10 +27,15 @@
 # you notice any bugs.
 #
 set -e
-
+if [[ $- == *i* ]]; then
+	echo "Pipe into bash or run as script (after chmod +x $0)"
+	echo "Don't source, your shell will disappear on any error!"
+	return
+fi
 
 install_caddy()
 {
+	trap 'echo -e "Aborting, error $? in command:\n $BASH_COMMAND"' EXIT
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
@@ -167,6 +172,7 @@ install_caddy()
 	$caddy_bin --version
 
 	echo "Successfully installed"
+	trap EXIT
 	exit 0
 }
 
