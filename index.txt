@@ -91,7 +91,7 @@ install_caddy()
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
 		OSX_VER="$(sw_vers | grep ProductVersion | cut -d':' -f2 | cut -f2)"
-		IFS='.' read OSX_MAJOR OSX_MINOR OSX_PATCH <<<"$OSX_VER"
+		IFS='.' read OSX_MAJOR OSX_MINOR _ <<<"$OSX_VER"
 
 		# Major
 		if ((OSX_MAJOR < 10)); then
@@ -129,7 +129,7 @@ install_caddy()
 	if [[ $caddy_cur_ver ]]; then
 		# caddy of some version is already installed
 		caddy_path="$(type -p caddy)"
-		caddy_backup="$caddy_path_$caddy_cur_ver"
+		caddy_backup="${caddy_path}_$caddy_cur_ver"
 		echo "Backing up $caddy_path to $caddy_backup"
 		echo "(Password may be required.)"
 		$sudo_cmd mv "$caddy_path" "$caddy_backup"
@@ -141,7 +141,7 @@ install_caddy()
 
 
 	echo "Downloading Caddy for $caddy_os/$caddy_arch..."
-	caddy_file="caddy_$caddy_os_$caddy_arch$caddy_arm_custom$caddy_dl_ext"
+	caddy_file="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
 	caddy_url="https://caddyserver.com/download/build?os=$caddy_os&arch=$caddy_arch&arm=$caddy_arm&features=$caddy_features"
 	echo "$caddy_url"
 
