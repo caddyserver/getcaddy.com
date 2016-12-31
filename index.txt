@@ -27,11 +27,6 @@
 # you notice any bugs.
 #
 set -e
-if [[ $- == *i* ]]; then
-	echo "Pipe into bash or run as script (after chmod +x $0)"
-	echo "Don't source, your shell will disappear on any error!"
-	return
-fi
 
 install_caddy()
 {
@@ -83,7 +78,7 @@ install_caddy()
 		caddy_arm="7"
 	else
 		echo "unsupported or unknown architecture: $unamem"
-		exit 1
+		return 1
 	fi
 
 	uname="$(uname)"
@@ -96,17 +91,17 @@ install_caddy()
 		# Major
 		if ((OSX_MAJOR < 10)); then
 			echo "unsupported OS X version (9-)"
-			exit 2
+			return 2
 		fi
 		if ((OSX_MAJOR > 10)); then
 			echo "unsupported OS X version (11+)"
-			exit 2
+			return 2
 		fi
 
 		# Minor
 		if ((OSX_MINOR < 5)); then
 			echo "unsupported OS X version (10.5-)"
-			exit 2
+			return 2
 		fi
 	elif [[ ${uname^^} == *LINUX* ]]; then
 		caddy_os="linux"
@@ -121,7 +116,7 @@ install_caddy()
 		caddy_bin=$caddy_bin.exe
 	else
 		echo "unsupported or unknown os: $uname"
-		exit 3
+		return 3
 	fi
 
 	# Back up existing caddy, if any
@@ -154,7 +149,7 @@ install_caddy()
 		wget --quiet "$caddy_url" -O "$PREFIX/tmp/$caddy_file"
 	else
 		echo "could not find curl or wget"
-		exit 4
+		return 4
 	fi
 
 	echo "Extracting..."
@@ -173,7 +168,7 @@ install_caddy()
 
 	echo "Successfully installed"
 	trap EXIT
-	exit 0
+	return 0
 }
 
 install_caddy "$@"
