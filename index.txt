@@ -82,7 +82,8 @@ install_caddy()
 	fi
 
 	uname="$(uname)"
-	if [[ ${uname^^} == *DARWIN* ]]; then
+	unameu=$(tr '[:lower:]' '[:upper:]' <<<"$uname")
+	if [[ ${unameu} == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
 		OSX_VER="$(sw_vers | grep ProductVersion | cut -d':' -f2 | cut -f2)"
@@ -103,13 +104,13 @@ install_caddy()
 			echo "unsupported OS X version (10.5-)"
 			return 2
 		fi
-	elif [[ ${uname^^} == *LINUX* ]]; then
+	elif [[ ${unameu} == *LINUX* ]]; then
 		caddy_os="linux"
-	elif [[ ${uname^^} == *FREEBSD* ]]; then
+	elif [[ ${unameu} == *FREEBSD* ]]; then
 		caddy_os="freebsd"
-	elif [[ ${uname^^} == *OPENBSD* ]]; then
+	elif [[ ${unameu} == *OPENBSD* ]]; then
 		caddy_os="openbsd"
-	elif [[ ${uname^^} == *WIN* ]]; then
+	elif [[ ${unameu} == *WIN* ]]; then
 		# Should catch cygwin
 		caddy_os="windows"
 		caddy_dl_ext=".zip"
