@@ -22,15 +22,23 @@
 #
 #	$ curl https://getcaddy.com | bash -s git,mailout
 #
+# Or it can be run after downloading:
+#
+# $ wget getcaddy.com -O getcaddy.sh
+# $ bash getcaddy.sh git.mailout
+#
+# The full list of available features is:
+#  awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
+#  locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload
+#
 # This should work on Mac, Linux, and BSD systems, and
 # hopefully Windows with Cygwin. Please open an issue if
 # you notice any bugs.
 #
-set -e
 
 install_caddy()
 {
-	trap 'echo -e "Aborting, error $? in command:\n $BASH_COMMAND"' EXIT
+	trap 'echo -e "Aborting, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
@@ -77,12 +85,12 @@ install_caddy()
 		caddy_arch="arm"
 		caddy_arm="7"
 	else
-		echo "unsupported or unknown architecture: $unamem"
-		return 1
+		echo "Aborting, unsupported or unknown architecture: $unamem"
+		return 2
 	fi
 
 	uname="$(uname)"
-	unameu=$(tr '[:lower:]' '[:upper:]' <<<"$uname")
+	unameu=$(sed 's/./\U&/g' <<<"$uname")
 	if [[ ${unameu} == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
@@ -91,18 +99,18 @@ install_caddy()
 
 		# Major
 		if ((OSX_MAJOR < 10)); then
-			echo "unsupported OS X version (9-)"
-			return 2
+			echo "Aborting, unsupported OS X version (9-)"
+			return 3
 		fi
 		if ((OSX_MAJOR > 10)); then
-			echo "unsupported OS X version (11+)"
-			return 2
+			echo "Aborting, unsupported OS X version (11+)"
+			return 4
 		fi
 
 		# Minor
 		if ((OSX_MINOR < 5)); then
-			echo "unsupported OS X version (10.5-)"
-			return 2
+			echo "Aborting, unsupported OS X version (10.5-)"
+			return 5
 		fi
 	elif [[ ${unameu} == *LINUX* ]]; then
 		caddy_os="linux"
@@ -116,8 +124,8 @@ install_caddy()
 		caddy_dl_ext=".zip"
 		caddy_bin=$caddy_bin.exe
 	else
-		echo "unsupported or unknown os: $uname"
-		return 3
+		echo "Aborting, unsupported or unknown os: $uname"
+		return 6
 	fi
 
 	# Back up existing caddy, if any
@@ -149,8 +157,8 @@ install_caddy()
 	elif type -p wget &>/dev/null; then
 		wget --quiet "$caddy_url" -O "$PREFIX/tmp/$caddy_file"
 	else
-		echo "could not find curl or wget"
-		return 4
+		echo "Aborting, could not find curl or wget"
+		return 7
 	fi
 
 	echo "Extracting..."
@@ -162,13 +170,14 @@ install_caddy()
 
 	echo "Putting caddy in $install_path (may require password)"
 	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
+	$sudo_cmd setcap cap_net_bind_service=+ep "$install_path/$caddy_bin"
 	$sudo_cmd rm "$PREFIX/tmp/$caddy_file"
 
 	# check installation
 	$caddy_bin --version
 
 	echo "Successfully installed"
-	trap EXIT
+	trap ERR
 	return 0
 }
 
