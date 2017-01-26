@@ -25,7 +25,7 @@
 # Or it can be run after downloading:
 #
 # $ wget getcaddy.com -O getcaddy.sh
-# $ bash getcaddy.sh git.mailout
+# $ bash getcaddy.sh git,mailout
 #
 # The full list of available features is:
 #  awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
