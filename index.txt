@@ -31,8 +31,13 @@
 #  awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
 #  locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload
 #
-# When 'same' is the only feature given, an existing binary will be upgraded with
-# the same plugins. It is also valid to specify 'none' for no plugins.
+# When the feature list starts with a comma, the plugins listed after are
+# added to the existing binary's present http features. A sole comma means
+# keep the same feature set.
+#
+#	$ wget -qO- getcaddy.com | bash -s ,hugo
+#
+# It is also valid to just specify 'none' for no plugins.
 #
 # A forced install location (path+filename) can be given as a second argument:
 #
@@ -45,12 +50,14 @@
 
 install_caddy()
 {
-	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; [[ $BASH_SOURCE ]] && return 1' ERR
+	set -E
+	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
 
 	#########################
 	# Which OS and version? #
 	#########################
 
+	# Determine arch (and arm)
 	# NOTE: `uname -m` is more accurate and universal than `arch`
 	# See https://en.wikipedia.org/wiki/Uname
 	caddy_arm=""
@@ -75,6 +82,7 @@ install_caddy()
 		return 2
 	fi
 
+	# Determine os, binary name and package type
 	caddy_bin="caddy"
 	caddy_dl_ext=".tar.gz"
 	uname="$(uname)"
@@ -116,15 +124,8 @@ install_caddy()
 		return 6
 	fi
 
-	###################
-	# Which features? #
-	###################
-
-	caddy_features="$1"
-	[[ $caddy_features = none ]] && caddy_features=""
-
-	pid=$(pgrep -nx "$caddy_bin" || true)  # most recent match if running
 	# determine install location, caddy_path is the full path
+	pid=$(pgrep -nx "$caddy_bin" || true)  # most recent match if running
 	if [[ $2 ]]; then  # if specified: force that install location
 		caddy_path="$2"
 		[[ ${caddy_path:0:1} = / ]] || caddy_path="./$caddy_path"
@@ -135,32 +136,37 @@ install_caddy()
 		caddy_path=$(type -p "$caddy_bin" || true)  # use the first caddy binary in PATH
 	fi
 
+	###################
+	# Which features? #
+	###################
+
+	features=$1
+	[[ $features = none ]] && features=""
 	valid_features=',awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,\
 			jwt,locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload,'
-	# if features=same: get the current plugins
-	if [[ $caddy_features = same ]]; then
-		if [[ -x $caddy_path ]]; then  # weed out the invalid features
+	# if features starts with comma: get the current plugins
+	if [[ ${features:0:1} = ',' ]]; then
+		# if no binary found, just install a new one with the listed features
+		if [[ -x $caddy_path ]]; then  # read plugins from binary if present
 			plugins=$("$caddy_path" -plugins |grep ' http\.' |sed 's/^.*http\.//')
-			caddy_features=""
+			# only add valid features in the plugins list
 			for plugin in ${plugins[@]}; do
-				[[ $valid_features = *,$plugin,* ]] && caddy_features+=",$plugin"
+				[[ $valid_features = *,$plugin,* ]] && features+=",$plugin"
 			done
-			# if not empty: remove leading comma
-			[[ $caddy_features ]] && caddy_features=${caddy_features:1}
-		else
-			echo "Aborted, feature 'same' invalid: no executable found"
+		fi
+	fi
+
+	# validate the specified features
+	featurelist=($(sed 's/,/ /g' <<<"$features"))
+	for feature in "${featurelist[@]}"; do
+		if [[ $valid_features != *,$feature,* ]]; then
+			echo "Aborted, feature '$feature' not valid"
 			return 7
 		fi
-	else  # check features for validity
-		features=($(sed 's/,/ /g' <<<"$caddy_features"))
-		for feature in ${features[@]}; do
-			if [[ $valid_features != *,$feature,* ]]; then
-				echo "Aborted, feature '$feature' not valid"
-				return 8
-			fi
-		done
-	fi
-	
+	done
+	# remove extraneous commas
+	caddy_features=$(sed 's/ /,/g' <<<${featurelist[@]})
+
 	# determine fresh install location
 	if [[ -z $caddy_path ]]; then
 		install_path="/usr/local/bin"
@@ -197,7 +203,7 @@ install_caddy()
 		wget --quiet "$caddy_url" -O "$tmp/$caddy_dl"
 	else
 		echo "Aborted, could not find curl or wget"
-		return 9
+		return 8
 	fi
 
 	echo "Extracting..."
