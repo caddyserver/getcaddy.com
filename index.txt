@@ -123,7 +123,7 @@ install_caddy()
 	caddy_features="$1"
 	[[ $caddy_features = none ]] && caddy_features=""
 
-	pid=$(pgrep -nx "$caddy_bin")  # most recent match if running
+	pid=$(pgrep -nx "$caddy_bin" || true)  # most recent match if running
 	# determine install location, caddy_path is the full path
 	if [[ $2 ]]; then  # if specified: force that install location
 		caddy_path="$2"
@@ -132,7 +132,7 @@ install_caddy()
 		bin=$(ls -l /proc/$pid/exe)
 		caddy_path=$(sed "s@^.* /proc/$pid/exe -> @@" <<<"$bin")
 	else
-		caddy_path=$(type -p "$caddy_bin")  # use the first caddy binary in PATH
+		caddy_path=$(type -p "$caddy_bin" || true)  # use the first caddy binary in PATH
 	fi
 
 	valid_features=',awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,\
