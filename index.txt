@@ -28,8 +28,11 @@
 #	$ bash getcaddy.sh git,mailout
 #
 # The full list of available features is:
-#  awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
-#  locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload
+#  DNS,awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
+#  locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload,
+#  cloudflare,digitalocean,dnsimple,dyn,gandi,googlecloud,linode,namecheap,ovh,
+#  rfc2136,route53,vultr
+# (see https://caddyserver.com/download)
 #
 # When the feature list starts with a comma, the plugins listed after are
 # added to the existing binary's present http features. A sole comma means
@@ -142,8 +145,7 @@ install_caddy()
 
 	features=$1
 	[[ $features = none ]] && features=""
-	valid_features=',awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,\
-			jwt,locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload,'
+	valid_features=",DNS,awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload,cloudflare,digitalocean,dnsimple,dyn,gandi,googlecloud,linode,namecheap,ovh,rfc2136,route53,vultr,"
 	# if features starts with comma: get the current plugins
 	if [[ ${features:0:1} = ',' ]]; then
 		# if no binary found, just install a new one with the listed features
