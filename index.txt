@@ -22,45 +22,44 @@
 #
 #	$ curl https://getcaddy.com | bash -s git,mailout
 #
-# Or it can be first downloaded and then run:
-#
-#	$ wget getcaddy.com -O getcaddy.sh
-#	$ bash getcaddy.sh git,mailout
-#
-# The full list of available features is:
-#  awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
-#  locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload
-#
-# When the feature list starts with a comma, the plugins listed after are
-# added to the existing binary's present http features. A sole comma means
-# keep the same feature set.
-#
-#	$ wget -qO- getcaddy.com | bash -s ,hugo
-#
-# It is also valid to just specify 'none' for no plugins.
-#
-# A forced install location (path+filename) can be given as a second argument:
-#
-#	$ bash getcaddy.sh none /root/caddyserver
-#
 # This should work on Mac, Linux, and BSD systems, and
 # hopefully Windows with Cygwin. Please open an issue if
 # you notice any bugs.
 #
+set -e
 
 install_caddy()
 {
-	set -E
-	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
+	trap 'echo -e "Aborting, error $? in command:\n $BASH_COMMAND"' EXIT
+	caddy_os="unsupported"
+	caddy_arch="unknown"
+	caddy_arm=""
+	caddy_features="$1"
+	install_path="/usr/local/bin"
+
+	# Termux on Android has $PREFIX set which already ends with /usr
+	if [[ -n "$ANDROID_ROOT" && -n "$PREFIX" ]]; then
+		install_path="$PREFIX/bin"
+	fi
+
+	# Fall back to /usr/bin if necessary
+	if [[ ! -d $install_path ]]; then
+		install_path="/usr/bin"
+	fi
+
+	# Not every platform has or needs sudo (see issue #40)
+	((EUID)) && [[ -z "$ANDROID_ROOT" ]] && sudo_cmd="sudo"
+
 
 	#########################
 	# Which OS and version? #
 	#########################
 
-	# Determine arch (and arm)
+	caddy_bin="caddy"
+	caddy_dl_ext=".tar.gz"
+
 	# NOTE: `uname -m` is more accurate and universal than `arch`
 	# See https://en.wikipedia.org/wiki/Uname
-	caddy_arm=""
 	unamem="$(uname -m)"
 	if [[ $unamem == *aarch64* ]]; then
 		caddy_arch="arm64"
@@ -78,15 +77,12 @@ install_caddy()
 		caddy_arch="arm"
 		caddy_arm="7"
 	else
-		echo "Aborted, unsupported or unknown architecture: $unamem"
-		return 2
+		echo "unsupported or unknown architecture: $unamem"
+		return 1
 	fi
 
-	# Determine os, binary name and package type
-	caddy_bin="caddy"
-	caddy_dl_ext=".tar.gz"
 	uname="$(uname)"
-	unameu=$(sed 's/./\U&/g' <<<"$uname")
+	unameu=$(tr '[:lower:]' '[:upper:]' <<<"$uname")
 	if [[ ${unameu} == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
@@ -95,18 +91,18 @@ install_caddy()
 
 		# Major
 		if ((OSX_MAJOR < 10)); then
-			echo "Aborted, unsupported OS X version (9-)"
-			return 3
+			echo "unsupported OS X version (9-)"
+			return 2
 		fi
 		if ((OSX_MAJOR > 10)); then
-			echo "Aborted, unsupported OS X version (11+)"
-			return 4
+			echo "unsupported OS X version (11+)"
+			return 2
 		fi
 
 		# Minor
 		if ((OSX_MINOR < 5)); then
-			echo "Aborted, unsupported OS X version (10.5-)"
-			return 5
+			echo "unsupported OS X version (10.5-)"
+			return 2
 		fi
 	elif [[ ${unameu} == *LINUX* ]]; then
 		caddy_os="linux"
@@ -120,127 +116,60 @@ install_caddy()
 		caddy_dl_ext=".zip"
 		caddy_bin=$caddy_bin.exe
 	else
-		echo "Aborted, unsupported or unknown os: $uname"
-		return 6
+		echo "unsupported or unknown os: $uname"
+		return 3
 	fi
 
-	# determine install location, caddy_path is the full path
-	pid=$(pgrep -nx "$caddy_bin" || true)  # most recent match if running
-	if [[ $2 ]]; then  # if specified: force that install location
-		caddy_path="$2"
-		[[ ${caddy_path:0:1} = / ]] || caddy_path="./$caddy_path"
-	elif [[ $pid ]]; then  # if running: use location of the binary
-		bin=$(ls -l /proc/$pid/exe)
-		caddy_path=$(sed "s@^.* /proc/$pid/exe -> @@" <<<"$bin")
-	else
-		caddy_path=$(type -p "$caddy_bin" || true)  # use the first caddy binary in PATH
-	fi
-
-	###################
-	# Which features? #
-	###################
-
-	features=$1
-	[[ $features = none ]] && features=""
-	valid_features=',awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,\
-			jwt,locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload,'
-	# if features starts with comma: get the current plugins
-	if [[ ${features:0:1} = ',' ]]; then
-		# if no binary found, just install a new one with the listed features
-		if [[ -x $caddy_path ]]; then  # read plugins from binary if present
-			plugins=$("$caddy_path" -plugins |grep ' http\.' |sed 's/^.*http\.//')
-			# only add valid features in the plugins list
-			for plugin in ${plugins[@]}; do
-				[[ $valid_features = *,$plugin,* ]] && features+=",$plugin"
-			done
-		fi
-	fi
-
-	# validate the specified features
-	featurelist=($(sed 's/,/ /g' <<<"$features"))
-	for feature in "${featurelist[@]}"; do
-		if [[ $valid_features != *,$feature,* ]]; then
-			echo "Aborted, feature '$feature' not valid"
-			return 7
-		fi
-	done
-	# remove extraneous commas
-	caddy_features=$(sed 's/ /,/g' <<<${featurelist[@]})
-
-	# determine fresh install location
-	if [[ -z $caddy_path ]]; then
-		install_path="/usr/local/bin"
-
-		# Termux on Android has $PREFIX set which already ends with /usr
-		if [[ -n "$ANDROID_ROOT" && -n "$PREFIX" ]]; then
-			install_path="$PREFIX/bin"
-		fi
-
-		# Fall back to /usr/bin if necessary
-		if [[ ! -d $install_path ]]; then
-			install_path="/usr/bin"
-		fi
-		caddy_path="$install_path/$caddy_bin"
+	# Back up existing caddy, if any
+	caddy_cur_ver="$(caddy --version 2>/dev/null | cut -d ' ' -f2)"
+	if [[ $caddy_cur_ver ]]; then
+		# caddy of some version is already installed
+		caddy_path="$(type -p caddy)"
+		caddy_backup="${caddy_path}_$caddy_cur_ver"
+		echo "Backing up $caddy_path to $caddy_backup"
+		echo "(Password may be required.)"
+		$sudo_cmd mv "$caddy_path" "$caddy_backup"
 	fi
 
 	########################
 	# Download and extract #
 	########################
 
+
 	echo "Downloading Caddy for $caddy_os/$caddy_arch..."
-	caddy_dl="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
+	caddy_file="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
 	caddy_url="https://caddyserver.com/download/build?os=$caddy_os&arch=$caddy_arch&arm=$caddy_arm&features=$caddy_features"
 	echo "$caddy_url"
 
 	# Use $PREFIX for compatibility with Termux on Android
-	tmp="$PREFIX/tmp"
-	# Make room for the download of the package
-	rm -rf "$tmp/$caddy_dl"
+	rm -rf "$PREFIX/tmp/$caddy_file"
 
 	if type -p curl &>/dev/null; then
-		curl -fsSL "$caddy_url" -o "$tmp/$caddy_dl"
+		curl -fsSL "$caddy_url" -o "$PREFIX/tmp/$caddy_file"
 	elif type -p wget &>/dev/null; then
-		wget --quiet "$caddy_url" -O "$tmp/$caddy_dl"
+		wget --quiet "$caddy_url" -O "$PREFIX/tmp/$caddy_file"
 	else
-		echo "Aborted, could not find curl or wget"
-		return 8
+		echo "could not find curl or wget"
+		return 4
 	fi
 
 	echo "Extracting..."
-	case "$caddy_dl" in
-		*.zip)    unzip -o "$tmp/$caddy_dl" "$caddy_bin" -d "$tmp/" ;;
-		*.tar.gz) tar -xzf "$tmp/$caddy_dl" -C "$tmp/" "$caddy_bin" ;;
+	case "$caddy_file" in
+		*.zip)    unzip -o "$PREFIX/tmp/$caddy_file" "$caddy_bin" -d "$PREFIX/tmp/" ;;
+		*.tar.gz) tar -xzf "$PREFIX/tmp/$caddy_file" -C "$PREFIX/tmp/" "$caddy_bin" ;;
 	esac
-	chmod +x "$tmp/$caddy_bin"
+	chmod +x "$PREFIX/tmp/$caddy_bin"
 
-	# Not every platform has or needs sudo (see issue #40)
-	((EUID)) && [[ -z "$ANDROID_ROOT" ]] && sudo_cmd="sudo"
-
-	# Back up existing caddy, if any
-	caddy_cur_ver="$("$caddy_path" -version 2>/dev/null | cut -d ' ' -f2)"
-	if [[ $caddy_cur_ver ]]; then
-		# caddy of some version is already installed
-		caddy_backup="${caddy_path}_$caddy_cur_ver"
-		echo "Backing up $caddy_path to $caddy_backup"
-		echo "(Password may be required.)"
-		$sudo_cmd cp -v --backup=numbered "$caddy_path" "$caddy_backup"
-	fi
-
-	[[ $pid ]] && echo "Stopping caddy" && kill -SIGINT $pid
-	echo "Putting caddy in $caddy_path (may require password)"
-	$sudo_cmd mv "$tmp/$caddy_bin" "$caddy_path"
-	$sudo_cmd setcap cap_net_bind_service=+ep "$caddy_path"
-	[[ $pid ]] && echo "Restarting caddy" && "$caddy_path"
-	$sudo_cmd rm "$tmp/$caddy_dl"
+	echo "Putting caddy in $install_path (may require password)"
+	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
+	$sudo_cmd rm "$PREFIX/tmp/$caddy_file"
 
 	# check installation
-	echo "Version: $("$caddy_path" --version)"
+	$caddy_bin --version
 
 	echo "Successfully installed"
-	trap ERR
+	trap EXIT
 	return 0
 }
 
-install_caddy $@
-return=$?
-((return)) && echo "Not completed, aborted at $return"
+install_caddy "$@"
