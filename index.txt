@@ -22,15 +22,6 @@
 #
 #	$ curl https://getcaddy.com | bash -s git,mailout
 #
-# Or it can be run after downloading:
-#
-# $ wget getcaddy.com -O getcaddy.sh
-# $ bash getcaddy.sh git,mailout
-#
-# The full list of available features is:
-#  awslambda,cors,expires,filemanager,filter,git,hugo,ipfilter,jsonp,jwt,
-#  locale,mailout,minify,multipass,prometheus,ratelimit,realip,search,upload
-#
 # This should work on Mac, Linux, and BSD systems, and
 # hopefully Windows with Cygwin. Please open an issue if
 # you notice any bugs.
@@ -132,7 +123,7 @@ install_caddy()
 	caddy_cur_ver="$(caddy --version 2>/dev/null | cut -d ' ' -f2)"
 	if [[ $caddy_cur_ver ]]; then
 		# caddy of some version is already installed
-		caddy_path="$(type -p caddy)"
+		caddy_path="$(type -p "$caddy_bin")"
 		caddy_backup="${caddy_path}_$caddy_cur_ver"
 		echo "Backing up $caddy_path to $caddy_backup"
 		echo "(Password may be required.)"
@@ -170,8 +161,10 @@ install_caddy()
 
 	echo "Putting caddy in $install_path (may require password)"
 	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
-	$sudo_cmd setcap cap_net_bind_service=+ep "$install_path/$caddy_bin"
-	$sudo_cmd rm "$PREFIX/tmp/$caddy_file"
+	if setcap_cmd=$(type -p setcap); then
+		$sudo_cmd $setcap_cmd cap_net_bind_service=+ep "$install_path/$caddy_bin"
+	fi
+	$sudo_cmd rm -- "$PREFIX/tmp/$caddy_file"
 
 	# check installation
 	$caddy_bin --version
