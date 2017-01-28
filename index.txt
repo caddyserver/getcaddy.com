@@ -26,10 +26,11 @@
 # hopefully Windows with Cygwin. Please open an issue if
 # you notice any bugs.
 #
+set -e
 
 install_caddy()
 {
-	trap 'echo -e "Aborting, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
+	trap 'echo -e "Aborting, error $? in command:\n $BASH_COMMAND"' EXIT
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
@@ -76,12 +77,12 @@ install_caddy()
 		caddy_arch="arm"
 		caddy_arm="7"
 	else
-		echo "Aborting, unsupported or unknown architecture: $unamem"
-		return 2
+		echo "unsupported or unknown architecture: $unamem"
+		return 1
 	fi
 
 	uname="$(uname)"
-	unameu=$(sed 's/./\U&/g' <<<"$uname")
+	unameu=$(tr '[:lower:]' '[:upper:]' <<<"$uname")
 	if [[ ${unameu} == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
@@ -90,18 +91,18 @@ install_caddy()
 
 		# Major
 		if ((OSX_MAJOR < 10)); then
-			echo "Aborting, unsupported OS X version (9-)"
-			return 3
+			echo "unsupported OS X version (9-)"
+			return 2
 		fi
 		if ((OSX_MAJOR > 10)); then
-			echo "Aborting, unsupported OS X version (11+)"
-			return 4
+			echo "unsupported OS X version (11+)"
+			return 2
 		fi
 
 		# Minor
 		if ((OSX_MINOR < 5)); then
-			echo "Aborting, unsupported OS X version (10.5-)"
-			return 5
+			echo "unsupported OS X version (10.5-)"
+			return 2
 		fi
 	elif [[ ${unameu} == *LINUX* ]]; then
 		caddy_os="linux"
@@ -115,8 +116,8 @@ install_caddy()
 		caddy_dl_ext=".zip"
 		caddy_bin=$caddy_bin.exe
 	else
-		echo "Aborting, unsupported or unknown os: $uname"
-		return 6
+		echo "unsupported or unknown os: $uname"
+		return 3
 	fi
 
 	# Back up existing caddy, if any
@@ -148,8 +149,8 @@ install_caddy()
 	elif type -p wget &>/dev/null; then
 		wget --quiet "$caddy_url" -O "$PREFIX/tmp/$caddy_file"
 	else
-		echo "Aborting, could not find curl or wget"
-		return 7
+		echo "could not find curl or wget"
+		return 4
 	fi
 
 	echo "Extracting..."
@@ -170,7 +171,7 @@ install_caddy()
 	$caddy_bin --version
 
 	echo "Successfully installed"
-	trap ERR
+	trap EXIT
 	return 0
 }
 
