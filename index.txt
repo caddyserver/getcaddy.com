@@ -124,7 +124,7 @@ install_caddy()
 	caddy_cur_ver="$(caddy --version 2>/dev/null | cut -d ' ' -f2)"
 	if [[ $caddy_cur_ver ]]; then
 		# caddy of some version is already installed
-		caddy_path="$(type -p caddy)"
+		caddy_path="$(type -p "$caddy_bin")"
 		caddy_backup="${caddy_path}_$caddy_cur_ver"
 		echo "Backing up $caddy_path to $caddy_backup"
 		echo "(Password may be required.)"
@@ -162,7 +162,10 @@ install_caddy()
 
 	echo "Putting caddy in $install_path (may require password)"
 	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
-	$sudo_cmd rm "$PREFIX/tmp/$caddy_file"
+	if setcap_cmd=$(type -p setcap); then
+		$sudo_cmd $setcap_cmd cap_net_bind_service=+ep "$install_path/$caddy_bin"
+	fi
+	$sudo_cmd rm -- "$PREFIX/tmp/$caddy_file"
 
 	# check installation
 	$caddy_bin --version
