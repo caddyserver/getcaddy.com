@@ -4,7 +4,7 @@
 #
 #   Homepage: https://caddyserver.com
 #   Issues:   https://github.com/caddyserver/getcaddy.com/issues
-#   Requires: bash, curl or wget, tar or unzip
+#   Requires: bash, coreutils, curl or wget, tar or unzip
 #
 # Hello! This is an experimental script that installs Caddy
 # into your PATH (which may require password authorization).
@@ -49,7 +49,6 @@ install_caddy()
 	# Not every platform has or needs sudo (see issue #40)
 	((EUID)) && [[ -z "$ANDROID_ROOT" ]] && sudo_cmd="sudo"
 
-
 	#########################
 	# Which OS and version? #
 	#########################
@@ -81,12 +80,13 @@ install_caddy()
 	fi
 
 	uname="$(uname)"
-	unameu=$(sed 's/./\U&/g' <<<"$uname")
+	declare -u unameu=$uname
 	if [[ ${unameu} == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
-		OSX_VER="$(sw_vers | grep ProductVersion | cut -d':' -f2 | cut -f2)"
-		IFS='.' read OSX_MAJOR OSX_MINOR _ <<<"$OSX_VER"
+		vers=$(sw_vers)
+		version=${vers##*ProductVersion: }
+		IFS='.' read OSX_MAJOR OSX_MINOR _ <<<"$version"
 
 		# Major
 		if ((OSX_MAJOR < 10)); then
@@ -119,21 +119,9 @@ install_caddy()
 		return 6
 	fi
 
-	# Back up existing caddy, if any
-	caddy_cur_ver="$(caddy --version 2>/dev/null | cut -d ' ' -f2)"
-	if [[ $caddy_cur_ver ]]; then
-		# caddy of some version is already installed
-		caddy_path="$(type -p "$caddy_bin")"
-		caddy_backup="${caddy_path}_$caddy_cur_ver"
-		echo "Backing up $caddy_path to $caddy_backup"
-		echo "(Password may be required.)"
-		$sudo_cmd mv "$caddy_path" "$caddy_backup"
-	fi
-
 	########################
 	# Download and extract #
 	########################
-
 
 	echo "Downloading Caddy for $caddy_os/$caddy_arch..."
 	caddy_file="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
@@ -158,6 +146,17 @@ install_caddy()
 		*.tar.gz) tar -xzf "$PREFIX/tmp/$caddy_file" -C "$PREFIX/tmp/" "$caddy_bin" ;;
 	esac
 	chmod +x "$PREFIX/tmp/$caddy_bin"
+
+	# Back up existing caddy, if any
+	caddy_cur_ver="$(caddy --version 2>/dev/null | cut -d ' ' -f2)"
+	if [[ $caddy_cur_ver ]]; then
+		# caddy of some version is already installed
+		caddy_path="$(type -p "$caddy_bin")"
+		caddy_backup="${caddy_path}_$caddy_cur_ver"
+		echo "Backing up $caddy_path to $caddy_backup"
+		echo "(Password may be required.)"
+		$sudo_cmd mv "$caddy_path" "$caddy_backup"
+	fi
 
 	echo "Putting caddy in $install_path (may require password)"
 	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
