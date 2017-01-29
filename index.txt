@@ -29,7 +29,7 @@
 
 install_caddy()
 {
-	trap 'echo -e "Aborting, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
+	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
@@ -75,7 +75,7 @@ install_caddy()
 		caddy_arch="arm"
 		caddy_arm="7"
 	else
-		echo "Aborting, unsupported or unknown architecture: $unamem"
+		echo "Aborted, unsupported or unknown architecture: $unamem"
 		return 2
 	fi
 
@@ -90,17 +90,17 @@ install_caddy()
 
 		# Major
 		if ((OSX_MAJOR < 10)); then
-			echo "Aborting, unsupported OS X version (9-)"
+			echo "Aborted, unsupported OS X version (9-)"
 			return 3
 		fi
 		if ((OSX_MAJOR > 10)); then
-			echo "Aborting, unsupported OS X version (11+)"
+			echo "Aborted, unsupported OS X version (11+)"
 			return 4
 		fi
 
 		# Minor
 		if ((OSX_MINOR < 5)); then
-			echo "Aborting, unsupported OS X version (10.5-)"
+			echo "Aborted, unsupported OS X version (10.5-)"
 			return 5
 		fi
 	elif [[ ${unameu} == *LINUX* ]]; then
@@ -115,7 +115,7 @@ install_caddy()
 		caddy_dl_ext=".zip"
 		caddy_bin=$caddy_bin.exe
 	else
-		echo "Aborting, unsupported or unknown os: $uname"
+		echo "Aborted, unsupported or unknown os: $uname"
 		return 6
 	fi
 
@@ -136,7 +136,7 @@ install_caddy()
 	elif type -p wget &>/dev/null; then
 		wget --quiet "$caddy_url" -O "$PREFIX/tmp/$caddy_file"
 	else
-		echo "Aborting, could not find curl or wget"
+		echo "Aborted, could not find curl or wget"
 		return 7
 	fi
 
@@ -148,7 +148,7 @@ install_caddy()
 	chmod +x "$PREFIX/tmp/$caddy_bin"
 
 	# Back up existing caddy, if any
-	caddy_cur_ver="$(caddy --version 2>/dev/null | cut -d ' ' -f2)"
+	caddy_cur_ver="$("$caddy_bin" --version 2>/dev/null | cut -d ' ' -f2)"
 	if [[ $caddy_cur_ver ]]; then
 		# caddy of some version is already installed
 		caddy_path="$(type -p "$caddy_bin")"
