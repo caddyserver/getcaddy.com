@@ -4,7 +4,7 @@
 #
 #   Homepage: https://caddyserver.com
 #   Issues:   https://github.com/caddyserver/getcaddy.com/issues
-#   Requires: bash, coreutils, curl or wget, tar or unzip
+#   Requires: bash, mv, rm, type, curl/wget, tar (or unzip on OSX and Windows)
 #
 # Hello! This is an experimental script that installs Caddy
 # into your PATH (which may require password authorization).
