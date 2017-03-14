@@ -85,7 +85,7 @@ install_caddy()
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
 		vers=$(sw_vers)
-		version=${vers##*ProductVersion: }
+		version=${vers##*ProductVersion:}
 		IFS='.' read OSX_MAJOR OSX_MINOR _ <<<"$version"
 
 		# Major
