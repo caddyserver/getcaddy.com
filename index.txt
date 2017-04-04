@@ -6,21 +6,20 @@
 #   Issues:   https://github.com/caddyserver/getcaddy.com/issues
 #   Requires: bash, mv, rm, type, curl/wget, tar (or unzip on OSX and Windows)
 #
-# Hello! This is an experimental script that installs Caddy
-# into your PATH (which may require password authorization).
-# Use it like this:
+# This script safely installs Caddy into your PATH (which may require
+# password authorization). Use it like this:
 #
 #	$ curl https://getcaddy.com | bash
 #	 or
 #	$ wget -qO- https://getcaddy.com | bash
 #
+# If you want to get Caddy with extra plugins, use -s with a
+# comma-separated list of plugin names, like this:
+#
+#	$ curl https://getcaddy.com | bash -s http.git,http.ratelimit,dns
+#
 # In automated environments, you may want to run as root.
 # If using curl, we recommend using the -fsSL flags.
-#
-# If you want to get Caddy with extra features, use -s with a
-# comma-separated list of directives, like this:
-#
-#	$ curl https://getcaddy.com | bash -s git,mailout
 #
 # This should work on Mac, Linux, and BSD systems, and
 # hopefully Windows with Cygwin. Please open an issue if
@@ -33,7 +32,7 @@ install_caddy()
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
-	caddy_features="$1"
+	caddy_plugins="$1"
 	install_path="/usr/local/bin"
 
 	# Termux on Android has $PREFIX set which already ends with /usr
@@ -123,9 +122,9 @@ install_caddy()
 	# Download and extract #
 	########################
 
-	echo "Downloading Caddy for $caddy_os/$caddy_arch..."
+	echo "Downloading Caddy for $caddy_os/$caddy_arch$caddy_arm..."
 	caddy_file="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
-	caddy_url="https://caddyserver.com/download/build?os=$caddy_os&arch=$caddy_arch&arm=$caddy_arm&features=$caddy_features"
+	caddy_url="https://caddyserver.com/download/$caddy_os/$caddy_arch$caddy_arm?plugins=$caddy_plugins"
 	echo "$caddy_url"
 
 	# Use $PREFIX for compatibility with Termux on Android
