@@ -4,7 +4,7 @@
 #
 #   Homepage: https://caddyserver.com
 #   Issues:   https://github.com/caddyserver/getcaddy.com/issues
-#   Requires: bash, mv, rm, type, curl/wget, tar (or unzip on OSX and Windows)
+#   Requires: bash, mv, rm, tr, type, curl/wget, tar (or unzip on OSX and Windows)
 #
 # This script safely installs Caddy into your PATH (which may require
 # password authorization). Use it like this:
@@ -78,8 +78,7 @@ install_caddy()
 		return 2
 	fi
 
-	uname="$(uname)"
-	declare -u unameu=$uname
+	unameu="$(tr '[:lower:]' '[:upper:]' <<<$(uname))"
 	if [[ ${unameu} == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
