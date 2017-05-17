@@ -146,6 +146,8 @@ install_caddy()
 	chmod +x "$PREFIX/tmp/$caddy_bin"
 
 	# Back up existing caddy, if any
+        # Ensure standard ‘command not found’ error on stderr
+        unset -f command_not_found_handle
 	caddy_cur_ver="$("$caddy_bin" --version 2>/dev/null | cut -d ' ' -f2)"
 	if [[ $caddy_cur_ver ]]; then
 		# caddy of some version is already installed
