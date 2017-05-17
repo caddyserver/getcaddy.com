@@ -147,14 +147,16 @@ install_caddy()
 	chmod +x "$PREFIX/tmp/$caddy_bin"
 
 	# Back up existing caddy, if any
-	caddy_cur_ver="$("$caddy_bin" --version 2>/dev/null | cut -d ' ' -f2)"
-	if [[ $caddy_cur_ver ]]; then
-		# caddy of some version is already installed
-		caddy_path="$(type -p "$caddy_bin")"
-		caddy_backup="${caddy_path}_$caddy_cur_ver"
-		echo "Backing up $caddy_path to $caddy_backup"
-		echo "(Password may be required.)"
-		$sudo_cmd mv "$caddy_path" "$caddy_backup"
+	if [[ -x $caddy_bin ]]; then
+		caddy_cur_ver="$("$caddy_bin" --version 2>/dev/null | cut -d ' ' -f2)"
+		if [[ $caddy_cur_ver ]]; then
+			# caddy of some version is already installed
+			caddy_path="$(type -p "$caddy_bin")"
+			caddy_backup="${caddy_path}_$caddy_cur_ver"
+			echo "Backing up $caddy_path to $caddy_backup"
+			echo "(Password may be required.)"
+			$sudo_cmd mv "$caddy_path" "$caddy_backup"
+		fi
 	fi
 
 	echo "Putting caddy in $install_path (may require password)"
