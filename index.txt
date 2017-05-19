@@ -107,8 +107,9 @@ install_caddy()
 		caddy_os="freebsd"
 	elif [[ ${unameu} == *OPENBSD* ]]; then
 		caddy_os="openbsd"
-	elif [[ ${unameu} == *WIN* ]]; then
+	elif [[ ${unameu} == *WIN* ]] || [[ ${unameu} == MSYS* ]]; then
 		# Should catch cygwin
+		sudo_cmd=""
 		caddy_os="windows"
 		caddy_dl_ext=".zip"
 		caddy_bin=$caddy_bin.exe
