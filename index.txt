@@ -161,7 +161,7 @@ install_caddy()
 
 	echo "Putting caddy in $install_path (may require password)"
 	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
-	if setcap_cmd=$(type -p setcap); then
+	if setcap_cmd=$($sudo_cmd which setcap); then
 		$sudo_cmd $setcap_cmd cap_net_bind_service=+ep "$install_path/$caddy_bin"
 	fi
 	$sudo_cmd rm -- "$PREFIX/tmp/$caddy_file"
