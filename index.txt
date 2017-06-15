@@ -79,7 +79,7 @@ install_caddy()
 	fi
 
 	unameu="$(tr '[:lower:]' '[:upper:]' <<<$(uname))"
-	if [[ ${unameu} == *DARWIN* ]]; then
+	if [[ $unameu == *DARWIN* ]]; then
 		caddy_os="darwin"
 		caddy_dl_ext=".zip"
 		vers=$(sw_vers)
@@ -101,13 +101,13 @@ install_caddy()
 			echo "Aborted, unsupported OS X version (10.5-)"
 			return 5
 		fi
-	elif [[ ${unameu} == *LINUX* ]]; then
+	elif [[ $unameu == *LINUX* ]]; then
 		caddy_os="linux"
-	elif [[ ${unameu} == *FREEBSD* ]]; then
+	elif [[ $unameu == *FREEBSD* ]]; then
 		caddy_os="freebsd"
-	elif [[ ${unameu} == *OPENBSD* ]]; then
+	elif [[ $unameu == *OPENBSD* ]]; then
 		caddy_os="openbsd"
-	elif [[ ${unameu} == *WIN* ]] || [[ ${unameu} == MSYS* ]]; then
+	elif [[ $unameu == *WIN* || $unameu == MSYS* ]]; then
 		# Should catch cygwin
 		sudo_cmd=""
 		caddy_os="windows"
@@ -161,7 +161,7 @@ install_caddy()
 
 	echo "Putting caddy in $install_path (may require password)"
 	$sudo_cmd mv "$PREFIX/tmp/$caddy_bin" "$install_path/$caddy_bin"
-	if setcap_cmd=$(type -p setcap); then
+	if setcap_cmd=$(PATH+=$PATH:/sbin type -p setcap); then
 		$sudo_cmd $setcap_cmd cap_net_bind_service=+ep "$install_path/$caddy_bin"
 	fi
 	$sudo_cmd rm -- "$PREFIX/tmp/$caddy_file"
