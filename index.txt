@@ -45,7 +45,7 @@ install_caddy()
 		install_path="/usr/bin"
 	fi
 
-	# Not every platform has or needs sudo (see issue #40)
+	# Not every platform has or needs sudo (https://termux.com/linux.html)
 	((EUID)) && [[ -z "$ANDROID_ROOT" ]] && sudo_cmd="sudo"
 
 	#########################
