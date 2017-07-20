@@ -146,9 +146,8 @@ install_caddy()
 	esac
 	chmod +x "$PREFIX/tmp/$caddy_bin"
 
-	# Back up existing caddy, if any
-	if [[ -x $caddy_bin ]]; then
-		caddy_path="$(type -p "$caddy_bin" || true)"
+	# Back up existing caddy, if any found in path
+	if caddy_path="$(type -p "$caddy_bin")"; then
 		caddy_backup="${caddy_path}_old"
 		echo "Backing up $caddy_path to $caddy_backup"
 		echo "(Password may be required.)"
