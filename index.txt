@@ -148,7 +148,7 @@ install_caddy()
 
 	# Back up existing caddy, if any
 	if [[ -x $caddy_bin ]]; then
-		caddy_path="$(type -p "$caddy_bin")"
+		caddy_path="$(type -p "$caddy_bin" || true)"
 		caddy_backup="${caddy_path}_old"
 		echo "Backing up $caddy_path to $caddy_backup"
 		echo "(Password may be required.)"
