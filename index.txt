@@ -4,7 +4,8 @@
 #
 #   Homepage: https://caddyserver.com
 #   Issues:   https://github.com/caddyserver/getcaddy.com/issues
-#   Requires: bash, mv, rm, tr, type, curl/wget, tar (or unzip on OSX and Windows)
+#   Requires: bash, mv, rm, tr, type, gpg, curl/wget, sudo (if not root)
+#             tar (or unzip on OSX and Windows)
 #
 # This script safely installs Caddy into your PATH (which may require
 # password authorization). Use it like this:
@@ -125,24 +126,44 @@ install_caddy()
 	echo "Downloading Caddy for $caddy_os/$caddy_arch$caddy_arm..."
 	caddy_file="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
 	caddy_url="https://caddyserver.com/download/$caddy_os/$caddy_arch$caddy_arm?plugins=$caddy_plugins"
+	caddy_asc="https://caddyserver.com/download/$caddy_os/$caddy_arch$caddy_arm/signature?plugins=$caddy_plugins"
 	echo "$caddy_url"
 
+	type -p gpg >/dev/null 2>&1 && gpg=1 || gpg=0
+
 	# Use $PREFIX for compatibility with Termux on Android
-	rm -rf "$PREFIX/tmp/$caddy_file"
+	dl="$PREFIX/tmp/$caddy_file"
+	rm -rf -- "$dl"
 
 	if type -p curl >/dev/null 2>&1; then
-		curl -fsSL "$caddy_url" -o "$PREFIX/tmp/$caddy_file"
+		curl -fsSL "$caddy_url" -o "$dl"
+		((gpg)) && curl -fsSL "$caddy_asc" -o "$dl.asc"
 	elif type -p wget >/dev/null 2>&1; then
-		wget --quiet "$caddy_url" -O "$PREFIX/tmp/$caddy_file"
+		wget --quiet "$caddy_url" -O "$dl"
+		((gpg)) && wget --quiet "$caddy_asc" -O "$dl.asc"
 	else
 		echo "Aborted, could not find curl or wget"
 		return 7
 	fi
 
+	# Verify download
+	if ((gpg)); then
+		caddy_pgp="65760C51EDEA2017CEA2CA15155B6D79CA56EA34"
+		gpg --keyserver ha.pool.sks-keyservers.net --recv-keys $caddy_pgp >/dev/null 2>&1
+		if gpg -q --batch --verify "$dl.asc" "$dl" >/dev/null 2>&1; then
+			echo "Download verification OK"
+		else
+			echo "Aborted, download verification failed"
+			return 8
+		fi
+	else
+		echo "Download verification not possible if gpg is not installed"
+	fi
+			
 	echo "Extracting..."
 	case "$caddy_file" in
-		*.zip)    unzip -o "$PREFIX/tmp/$caddy_file" "$caddy_bin" -d "$PREFIX/tmp/" ;;
-		*.tar.gz) tar -xzf "$PREFIX/tmp/$caddy_file" -C "$PREFIX/tmp/" "$caddy_bin" ;;
+		*.zip)    unzip -o "$dl" "$caddy_bin" -d "$PREFIX/tmp/" ;;
+		*.tar.gz) tar -xzf "$dl" -C "$PREFIX/tmp/" "$caddy_bin" ;;
 	esac
 	chmod +x "$PREFIX/tmp/$caddy_bin"
 
@@ -159,7 +180,7 @@ install_caddy()
 	if setcap_cmd=$(PATH+=$PATH:/sbin type -p setcap); then
 		$sudo_cmd $setcap_cmd cap_net_bind_service=+ep "$install_path/$caddy_bin"
 	fi
-	$sudo_cmd rm -- "$PREFIX/tmp/$caddy_file"
+	$sudo_cmd rm -- "$dl"
 
 	# check installation
 	$caddy_bin --version
