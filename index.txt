@@ -151,8 +151,10 @@ install_caddy()
 		caddy_pgp="65760C51EDEA2017CEA2CA15155B6D79CA56EA34"
 		gpg --keyserver ha.pool.sks-keyservers.net --recv-keys $caddy_pgp >/dev/null 2>&1
 		if gpg -q --batch --verify "$dl.asc" "$dl" >/dev/null 2>&1; then
+			rm -- "$dl.asc"
 			echo "Download verification OK"
 		else
+			rm -- "$dl.asc"
 			echo "Aborted, download verification failed"
 			return 8
 		fi
