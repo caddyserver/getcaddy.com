@@ -28,7 +28,7 @@
 
 install_caddy()
 {
-	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; return 1' ERR
+	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; exit 1' ERR
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
