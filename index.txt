@@ -26,6 +26,8 @@
 # you notice any bugs.
 #
 
+[[ $- = *i* ]] && echo "Don't source this script!" && return 8
+
 install_caddy()
 {
 	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; exit 1' ERR
