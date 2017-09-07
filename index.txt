@@ -4,20 +4,43 @@
 #
 #   Homepage: https://caddyserver.com
 #   Issues:   https://github.com/caddyserver/getcaddy.com/issues
-#   Requires: bash, mv, rm, tr, type, curl/wget, sudo (if not root)
+#   Requires: bash, mv, rm, tr, type, curl/wget, base64, sudo (if not root)
 #             tar (or unzip on OSX and Windows), gpg (optional verification)
 #
 # This script safely installs Caddy into your PATH (which may require
-# password authorization). Use it like this:
+# password authorization). Assuming a non-commercial license, use it
+# like this:
 #
-#	$ curl https://getcaddy.com | bash
+#	$ curl https://getcaddy.com | bash -s personal
 #	 or
-#	$ wget -qO- https://getcaddy.com | bash
+#	$ wget -qO- https://getcaddy.com | bash -s personal
 #
-# If you want to get Caddy with extra plugins, use -s with a
-# comma-separated list of plugin names, like this:
+# The syntax is:
 #
-#	$ curl https://getcaddy.com | bash -s http.git,http.ratelimit,dns
+#	bash -s [personal|commercial] [plugin1,plugin2,...] [accessCode1,accessCode2...]
+#
+# So if you want to get Caddy with extra plugins, the second
+# argument is a comma-separated list of plugin names, like this:
+#
+#	$ curl https://getcaddy.com | bash -s personal http.git,dns
+#
+# If you are downloading Caddy with unlisted plugins and need to
+# specify access codes, specify them, comma-separated, in the third
+# argument, like this:
+#
+#	$ curl https://getcaddy.com | bash -s personal unlisted accessCode
+#
+# If you purchased a commercial license, you must set your account
+# ID and API key in environment variables:
+#
+#	$ export CADDY_ACCOUNT_ID=...
+#	$ export CADDY_API_KEY=...
+#
+# Then you can request a commercial download:
+#
+#	$ curl https://getcaddy.com | bash -s commercial
+#
+# And the same argument syntax applies.
 #
 # In automated environments, you may want to run as root.
 # If using curl, we recommend using the -fsSL flags.
@@ -27,16 +50,22 @@
 # you notice any bugs.
 #
 
-[[ $- = *i* ]] && echo "Don't source this script!" && return 8
+[[ $- = *i* ]] && echo "Don't source this script!" && return 10
 
 install_caddy()
 {
 	trap 'echo -e "Aborted, error $? in command: $BASH_COMMAND"; trap ERR; exit 1' ERR
+	caddy_license="$1"
+	caddy_plugins="$2"
+	caddy_access_codes="$3"
+	install_path="/usr/local/bin"
 	caddy_os="unsupported"
 	caddy_arch="unknown"
 	caddy_arm=""
-	caddy_plugins="$1"
-	install_path="/usr/local/bin"
+
+	# TODO: License declaration will soon be required
+	#[[ -z $caddy_license ]] && echo "You must specify a license, for example: ... | bash -s personal" && return 9;
+	[[ -z $caddy_license ]] && echo "Notice! You will soon be required to specify a license; see announcement on website for details." && caddy_license="personal";
 
 	# Termux on Android has $PREFIX set which already ends with /usr
 	if [[ -n "$ANDROID_ROOT" && -n "$PREFIX" ]]; then
@@ -125,10 +154,11 @@ install_caddy()
 	# Download and extract #
 	########################
 
-	echo "Downloading Caddy for $caddy_os/$caddy_arch$caddy_arm..."
-	caddy_file="caddy_${caddy_os}_$caddy_arch${caddy_arm}_custom$caddy_dl_ext"
-	caddy_url="https://caddyserver.com/download/$caddy_os/$caddy_arch$caddy_arm?plugins=$caddy_plugins"
-	caddy_asc="https://caddyserver.com/download/$caddy_os/$caddy_arch$caddy_arm/signature?plugins=$caddy_plugins"
+	echo "Downloading Caddy for ${caddy_os}/${caddy_arch}${caddy_arm}..."
+	caddy_file="caddy_${caddy_os}_${caddy_arch}${caddy_arm}_custom${caddy_dl_ext}"
+	qs="license=${caddy_license}&plugins=${caddy_plugins}&access_codes=${caddy_access_codes}"
+	caddy_url="https://caddyserver.com/download/${caddy_os}/${caddy_arch}${caddy_arm}?${qs}"
+	caddy_asc="https://caddyserver.com/download/${caddy_os}/${caddy_arch}${caddy_arm}/signature?${qs}"
 	echo "$caddy_url"
 
 	type -p gpg >/dev/null 2>&1 && gpg=1 || gpg=0
@@ -138,11 +168,11 @@ install_caddy()
 	rm -rf -- "$dl"
 
 	if type -p curl >/dev/null 2>&1; then
-		curl -fsSL "$caddy_url" -o "$dl"
-		((gpg)) && curl -fsSL "$caddy_asc" -o "$dl.asc"
+		curl -fsSL "$caddy_url" -u "$CADDY_ACCOUNT_ID:$CADDY_API_KEY" -o "$dl"
+		((gpg)) && curl -fsSL "$caddy_asc" -u "$CADDY_ACCOUNT_ID:$CADDY_API_KEY" -o "$dl.asc"
 	elif type -p wget >/dev/null 2>&1; then
-		wget --quiet "$caddy_url" -O "$dl"
-		((gpg)) && wget --quiet "$caddy_asc" -O "$dl.asc"
+		wget --quiet --header "Authorization: Basic $(echo -ne "$CADDY_ACCOUNT_ID:$CADDY_API_KEY" | base64)" "$caddy_url" -O "$dl"
+		((gpg)) && wget --quiet --header "Authorization: Basic $(echo -ne "$CADDY_ACCOUNT_ID:$CADDY_API_KEY" | base64)" "$caddy_asc" -O "$dl.asc"
 	else
 		echo "Aborted, could not find curl or wget"
 		return 7
@@ -187,7 +217,7 @@ install_caddy()
 	$sudo_cmd rm -- "$dl"
 
 	# check installation
-	$caddy_bin --version
+	$caddy_bin -version
 
 	echo "Successfully installed"
 	trap ERR
