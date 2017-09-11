@@ -25,7 +25,7 @@
 #	$ curl https://getcaddy.com | bash -s personal http.git,dns
 #
 # If you are downloading Caddy with unlisted plugins and need to
-# specify access codes, specify them, comma-separated, in the third
+# provide access codes: list them, separated by commas, in the third
 # argument, like this:
 #
 #	$ curl https://getcaddy.com | bash -s personal unlisted accessCode
@@ -36,7 +36,7 @@
 #	$ export CADDY_ACCOUNT_ID=...
 #	$ export CADDY_API_KEY=...
 #
-# Then you can request a commercial download:
+# Then you can request a commercially-licensed download:
 #
 #	$ curl https://getcaddy.com | bash -s commercial
 #
@@ -64,8 +64,13 @@ install_caddy()
 	caddy_arm=""
 
 	# TODO: License declaration will soon be required
-	#[[ -z $caddy_license ]] && echo "You must specify a license, for example: ... | bash -s personal" && return 9;
-	[[ -z $caddy_license ]] && echo "Notice! You will soon be required to specify a license; see announcement on website for details." && caddy_license="personal";
+	#[[ -z $caddy_license ]] && echo "You must specify a license in the first argument, for example: ... | bash -s personal" && return 9;
+	[[ -z $caddy_license ]] && echo "Notice! You will soon be required to specify a license; see website for details." && caddy_license="personal";
+	if [[ "$caddy_license" != "personal" && "$caddy_license" != "commercial" ]]; then
+		caddy_plugins="$caddy_license"
+		caddy_license="personal"
+	fi
+	# END TODO
 
 	# Termux on Android has $PREFIX set which already ends with /usr
 	if [[ -n "$ANDROID_ROOT" && -n "$PREFIX" ]]; then
@@ -154,12 +159,11 @@ install_caddy()
 	# Download and extract #
 	########################
 
-	echo "Downloading Caddy for ${caddy_os}/${caddy_arch}${caddy_arm}..."
+	echo "Downloading Caddy for ${caddy_os}/${caddy_arch}${caddy_arm} (${caddy_license} license)..."
 	caddy_file="caddy_${caddy_os}_${caddy_arch}${caddy_arm}_custom${caddy_dl_ext}"
 	qs="license=${caddy_license}&plugins=${caddy_plugins}&access_codes=${caddy_access_codes}"
 	caddy_url="https://caddyserver.com/download/${caddy_os}/${caddy_arch}${caddy_arm}?${qs}"
 	caddy_asc="https://caddyserver.com/download/${caddy_os}/${caddy_arch}${caddy_arm}/signature?${qs}"
-	echo "$caddy_url"
 
 	type -p gpg >/dev/null 2>&1 && gpg=1 || gpg=0
 
