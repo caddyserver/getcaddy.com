@@ -68,7 +68,7 @@ install_caddy()
 	[[ -z $caddy_license ]] && echo "Notice! You will soon be required to specify a license; see website for details." && caddy_license="personal";
 	if [[ "$caddy_license" != "personal" && "$caddy_license" != "commercial" ]]; then
 		caddy_plugins="$caddy_license"
-		caddy_license="personal"
+		caddy_license="non-commercial"
 	fi
 	# END TODO
 
