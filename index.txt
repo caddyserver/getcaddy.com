@@ -63,8 +63,11 @@ install_caddy()
 	caddy_arch="unknown"
 	caddy_arm=""
 
-	# License declaration is required
-	[[ -z $caddy_license ]] && echo "You must specify a non-commercial or commercial license; see getcaddy.com for instructions." && return 9;
+	# Valid license declaration is required
+	if [[ "$caddy_license" != "personal" && "$caddy_license" != "commercial" ]]; then
+		echo "You must specify a personal or commercial license; see getcaddy.com for instructions."
+		return 9
+	fi
 
 	# Termux on Android has $PREFIX set which already ends with /usr
 	if [[ -n "$ANDROID_ROOT" && -n "$PREFIX" ]]; then
