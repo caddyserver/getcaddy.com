@@ -201,7 +201,7 @@ install_caddy()
 			rm -- "$dl.asc"
 			echo "Download verification OK"
 		else
-			rm -- "$dl.asc"
+			rm -- "$dl.asc" "$dl"
 			echo "Aborted, download verification failed"
 			return 8
 		fi
