@@ -197,7 +197,7 @@ install_caddy()
 		if ((!keyserver_ok))
 		then
 			echo "No valid response from keyservers"
-		elif gpg -q --batch --verify "$dl.asc" "$dl" >/dev/null 2>&1; then
+		elif gpg_verify_signature "$caddy_pgp" "$dl.asc" "$dl" >/dev/null 2>&1; then
 			rm -- "$dl.asc"
 			echo "Download verification OK"
 		else
@@ -238,5 +238,17 @@ install_caddy()
 	trap ERR
 	return 0
 }
+
+gpg_verify_signature()
+{
+	local fpr=${1:?fingerprint expected}
+	local sigpath=${2:?path expected}
+	local datapath=${3:-}
+	local tmpkeyring=$(mktemp)
+	trap 'rm -rf $tmpkeyring' RETURN
+	gpg -q --batch --export $fpr >$tmpkeyring
+	gpg -q --batch --verify --no-default-keyring --keyring $tmpkeyring -- $sigpath $datapath
+}
+
 
 install_caddy "$@"
